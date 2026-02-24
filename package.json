@@ -1,5 +1,5 @@
 {
-  "name": "Test Change App Name",
+  "name": "TestChangeAppName",
   "version": "1.0.0",
   "description": "Cordova plugin that allows you to change the display name of your app.",
   "cordova": {
