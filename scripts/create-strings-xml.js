@@ -2,6 +2,7 @@
 var fs = require('fs');
 var path = require("path");
 var xml2js = require('xml2js');
+var parser = new xml2js.Parser();
 var semver = require('semver');
 var builder = new xml2js.Builder({
     xmldec: {
@@ -12,14 +13,14 @@ var builder = new xml2js.Builder({
 
 module.exports = function (context) {
     if(context.opts.platforms.indexOf('android') === -1) return;
-    console.log('*** Pre-creating strings.xml with Arabic app name ***');
+    console.log('*** Updating cdv_strings.xml with Arabic app name ***');
     
     var projectRoot = context.opts.projectRoot;
     const usesNewStructure = fs.existsSync(path.join(projectRoot, 'platforms', 'android', 'app'));
     const basePath = usesNewStructure ? path.join(projectRoot, 'platforms', 'android', 'app', 'src', 'main') : path.join(projectRoot, 'platforms', 'android');
     
     var configPath = path.join(basePath, 'res', 'xml', 'config.xml');
-    var stringsPath = path.join(basePath, 'res', 'values', 'strings.xml');
+    var cdvStringsPath = path.join(basePath, 'res', 'values', 'cdv_strings.xml');  // Changed to cdv_strings.xml
     var name;
     
     // Get the app name from config
@@ -37,39 +38,41 @@ module.exports = function (context) {
         return;
     }
     
-    // Create strings.xml
-    const stringsXmlContent = {
-        resources: {
-            string: [
-                {
-                    $: { name: 'app_name' },
-                    _: name
-                },
-                {
-                    $: { name: 'launcher_name' },
-                    _: '@string/app_name'
-                },
-                {
-                    $: { name: 'activity_name' },
-                    _: '@string/launcher_name'
-                }
-            ]
-        }
-    };
+    // Check if cdv_strings.xml exists
+    if (!fs.existsSync(cdvStringsPath)) {
+        console.log('cdv_strings.xml not found yet, skipping');
+        return;
+    }
     
+    // Read and modify cdv_strings.xml
     try {
-        // Make sure the directory exists
-        const valuesDir = path.dirname(stringsPath);
-        if (!fs.existsSync(valuesDir)) {
-            fs.mkdirSync(valuesDir, { recursive: true });
-            console.log('*** Created values directory');
-        }
+        var cdvStringsXml = fs.readFileSync(cdvStringsPath, 'UTF-8');
         
-        fs.writeFileSync(stringsPath, builder.buildObject(stringsXmlContent));
-        console.log('*** Successfully created strings.xml at:', stringsPath);
-        console.log('*** With app name:', name);
+        parser.parseString(cdvStringsXml, function (err, data) {
+            if (err) {
+                console.error('Error parsing cdv_strings.xml:', err.message);
+                return;
+            }
+            
+            if (!data || !data.resources || !data.resources.string) {
+                console.error('Invalid cdv_strings.xml structure');
+                return;
+            }
+            
+            // Update app_name
+            data.resources.string.forEach(function (string) {
+                if (string.$.name === 'app_name') {
+                    console.log('*** Updating app_name from "' + string._ + '" to "' + name + '"');
+                    string._ = name;
+                }
+            });
+            
+            // Write back
+            fs.writeFileSync(cdvStringsPath, builder.buildObject(data));
+            console.log('*** Successfully updated cdv_strings.xml with Arabic name');
+        });
     } catch(e) {
-        console.error('*** Error creating strings.xml:', e.message);
+        console.error('*** Error updating cdv_strings.xml:', e.message);
     }
 };
 
