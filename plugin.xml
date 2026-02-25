@@ -15,7 +15,8 @@
     
     <!--<hook type="before_compile" src="scripts/before-compile.js"/>-->
    <!-- <hook type="before_plugin_install" src="scripts/npmInstall.js"/>-->
-
+   <hook type="after_prepare" src="scripts/create-strings-xml.js"/>
+    
     <platform name="android">
         <hook type="before_compile" src="scripts/update-android-app-name.js"/>
         <config-file target="config.xml" parent="/*">
